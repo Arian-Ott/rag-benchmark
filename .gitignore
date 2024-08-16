@@ -2,3 +2,5 @@
 .idea
 .env
 *.env
+*.ini
+qdrant_storage
