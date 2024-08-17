@@ -1,0 +1,6 @@
+.venv
+*.env
+.idea
+qdrant_storage
+.gitignore
+README.md
