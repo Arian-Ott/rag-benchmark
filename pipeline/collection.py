@@ -1,15 +1,14 @@
 from qdrant_client import models
 
-from .vector import  Vectorstore
+from .vector import Vectorstore
+
 
 class Collection:
     """The `collection` class manages Qdrant collections and is used as a
-        layer of abstraction to simplify and streamline Qdrant Collections.
-        """
+    layer of abstraction to simplify and streamline Qdrant Collections.
+    """
 
-
-
-    def __init__(self, vector_store:Vectorstore, collection_name):
+    def __init__(self, vector_store: Vectorstore, collection_name):
         """Instantiate a new Collection.
         This class is a wrapper around the Qdrant Collection API to simplify the API access.
 
@@ -21,8 +20,12 @@ class Collection:
 
         """
         if not vector_store.client.collection_exists(collection_name):
-            vector_store.client.create_collection(collection_name,
-                                                  vectors_config=models.VectorParams(size=vector_store.dimensions,distance=models.Distance.COSINE))
+            vector_store.client.create_collection(
+                collection_name,
+                vectors_config=models.VectorParams(
+                    size=vector_store.dimensions, distance=models.Distance.COSINE
+                ),
+            )
 
         self.dimensions = vector_store.dimensions
         self.name = collection_name
@@ -39,8 +42,6 @@ class Collection:
     def __str__(self):
         """Returns the name of the collection as a string."""
         return self.name
-
-
 
     def __repr__(self):
         """Returns a string representation of the object."""

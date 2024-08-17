@@ -4,3 +4,5 @@
 qdrant_storage
 .gitignore
 README.md
+**/__pycache__
+data/out

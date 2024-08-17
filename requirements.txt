@@ -4,3 +4,5 @@ python-decouple==3.8
 qdrant-client==1.11.0
 setuptools==72.2.0
 uvicorn==0.30.6
+tqdm~=4.66.5
+pypdf~=4.3.1

@@ -43,6 +43,3 @@ class Vectorstore:
         self.oai = openai.OpenAI(
             api_key=config("EMBEDDING"),
         )
-
-
-

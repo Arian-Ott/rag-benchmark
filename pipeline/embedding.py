@@ -3,8 +3,10 @@ import uuid
 
 from .vector import Vectorstore
 from qdrant_client.models import PointStruct
+
+
 class Embedding:
-    def __init__(self, vector_store:Vectorstore):
+    def __init__(self, vector_store: Vectorstore):
         self.vector_store = vector_store
         self._temp_text = []
 
@@ -27,7 +29,7 @@ class Embedding:
                 vector=data.embedding,
                 payload={"text": text},
             )
-            for  data, text in zip(result.data, texts)
+            for data, text in zip(result.data, texts)
         ]
         self._temp_text = []
         return points
