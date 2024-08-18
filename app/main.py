@@ -1,18 +1,19 @@
 from fastapi import FastAPI
 
-from pipeline import collection, embedding, retriever, vector
+from pipeline import collection, embedding, vector
 
 app = FastAPI()
 
+
 if __name__ == "__main__":
-    r = retriever.Extractor("../data")
-    r.extract()
-    r.to_txt()
+    # r = retriever.Extractor("../data")
+    # r.extract()
+    # r.to_txt()
     vectorstore = vector.Vectorstore("192.168.1.77", "text-embedding-3-small")
 
     col = collection.Collection(vectorstore, "text-embedding-3-small")
     emb = embedding.Embedding(vectorstore)
-    emb.add_text("Das Wertpapierhaus der Sparkassen")
+    emb.add_text("Ich esse einen Apfel")
 
     result = emb.embedding()
     col.upload(result)
