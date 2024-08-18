@@ -1,16 +1,105 @@
+import base64
 import os
+import time
+import zlib
 
+import requests as re
+from dotenv import dotenv_values
+from fastapi import HTTPException
+from pypdf import PdfReader
 from tqdm import tqdm
 
-from pypdf import PdfReader
+
+class DocumentDB:
+    def __init__(self, host, port):
+        try:
+            self.secrets = dotenv_values("../.env")
+            self._user = self.secrets["COUCH_DB_USER"]
+            self._password = self.secrets["COUCH_DB_SECRET"]
+        except KeyError as e:
+            raise Exception("Missing environment variable") from e
+
+        self.host = host
+        self.port = port
+        self.url = f"http://{self.host}:{self.port}"
+
+    def add_document(self, document):
+        try:
+            document["content"] = base64.b64encode(
+                zlib.compress(document["content"].encode("utf-8"), 9)
+            ).decode("utf-8")
+            response = re.put(
+                self.url + f'/docs/{document["title"]}-{document["date"]}',
+                json={
+                    "title": document["title"],
+                    "content": document["content"],
+                    "date": document["date"],
+                },
+                auth=(self._user, self._password),
+            )
+            response.raise_for_status()
+        except re.RequestException as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            return {
+                "document_id": f"{document['title']}-{document['date']}",
+                "db": "docs",
+                "message": "Document successfully added to CouchDB",
+                "timestamp": int(time.time()),
+            }
+
+    def get_document(self, doc_id):
+        try:
+            response = re.get(
+                self.url + f"/docs/{doc_id}", auth=(self._user, self._password)
+            )
+            response.raise_for_status()
+            document = response.json()
+
+            # Decode and decompress the content
+            document["content"] = zlib.decompress(
+                base64.b64decode(document["content"])
+            ).decode("utf-8")
+
+            return document
+        except re.exceptions.RequestException as e:
+            print(f"An error occurred while retrieving the document: {e}")
+            return None
+
+    def list_documents(self):
+        try:
+            response = re.get(
+                self.url + "/docs/_all_docs", auth=(self._user, self._password)
+            )
+            response.raise_for_status()
+            docs = response.json()
+
+            # Extract and return the list of document IDs
+            doc_ids = [row["id"] for row in docs["rows"]]
+            return doc_ids
+        except re.exceptions.RequestException as e:
+            print(f"An error occurred while listing documents: {e}")
+            return []
+
+    def delete_document(self, doc_id):
+        if not doc_id in self.list_documents():
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found. Cannot delete a non-existing document.",
+            )
+        rev = self.get_document(doc_id)["_rev"]
+        re.delete(
+            self.url + f"/docs/{doc_id}?rev={rev}", auth=(self._user, self._password)
+        )
 
 
 class Extractor:
-    def __init__(self, input_path):
+    def __init__(self, inp):
         self.cur = 0
         self.nex = 1
-        self.input_path = input_path
-        if not os.path.exists(self.input_path):
+        self.input_path = inp
+
+        if not os.path.exists(self.input_path) and type(inp) == str:
             raise RuntimeError("Given Path does not exist!")
 
         # Filter out only PDF files
@@ -23,6 +112,14 @@ class Extractor:
         self.extracted_pdfs = []
         self.paths_to_extract = []
         self.files = []
+
+    @staticmethod
+    def from_bytes(inp):
+        reader = PdfReader(inp)
+        pdf_text = ""
+        for page in reader.pages:
+            pdf_text += page.extract_text()
+        return pdf_text
 
     def extract(self):
         if not self.pdf_files:
