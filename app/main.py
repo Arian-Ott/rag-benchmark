@@ -1,20 +1,19 @@
 from fastapi import FastAPI
-import uvicorn
-from decouple import config
-from openai import embeddings
 
-from pipeline import vector, collection, embedding, retriever
+from pipeline import collection, embedding, vector
 
 app = FastAPI()
+
+
 if __name__ == "__main__":
-    r = retriever.Extractor("../data")
-    r.extract()
-    r.to_txt()
-    # vectorstore = vector.Vectorstore("192.168.1.77", "text-embedding-3-small")
+    # r = retriever.Extractor("../data")
+    # r.extract()
+    # r.to_txt()
+    vectorstore = vector.Vectorstore("192.168.1.77", "text-embedding-3-small")
 
-    # col = collection.Collection(vectorstore,"text-embedding-3-small")
-    # emb = embedding.Embedding(vectorstore)
-    # emb.add_text("Lol")
+    col = collection.Collection(vectorstore, "text-embedding-3-small")
+    emb = embedding.Embedding(vectorstore)
+    emb.add_text("Ich esse einen Apfel")
 
-# result = emb.embedding()
-# col.upload(result)
+    result = emb.embedding()
+    col.upload(result)
