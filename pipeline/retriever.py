@@ -92,7 +92,16 @@ class DocumentDB:
             self.url + f"/docs/{doc_id}?rev={rev}", auth=(self._user, self._password)
         )
 
+    def create_user(self, username, password, roles: list | tuple):
+        try:
+            print(re.get(self.url + f"/_users/org.couchdb.user:{username}").json())
 
+            if re.get(self.url + f"/_users/org.couchdb.user:{username}", auth=(self._user, self._password)).content is not None:
+                raise HTTPException(detail="User already exists", status_code=409)
+            re.post(url=self.url + "/_users/", data={"_id": f"org.couchdb.user:{username}", "name": username, "roles": roles, "type": "user", "password": password})
+
+        except re.exceptions.RequestException as e:
+            raise HTTPException(status_code=500, detail=str(e))
 class Extractor:
     def __init__(self, inp):
         self.cur = 0

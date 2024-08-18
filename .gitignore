@@ -5,3 +5,4 @@
 *.ini
 qdrant_storage
 data/out
+passwords
