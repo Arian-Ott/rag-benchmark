@@ -1,8 +1,8 @@
 import uvicorn
 from fastapi import FastAPI
 
-from .chat import Chat
-from .database import DocumentDB
+from chat import Chat
+from database import DocumentDB
 
 app = FastAPI()
 cht = Chat()
