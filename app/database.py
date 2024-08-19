@@ -52,7 +52,8 @@ class DocumentDB:
             "/db/add_user", self.create_user, methods=["PUT"], tags=["CouchDB"]
         )
 
-    async def upload_file(self, file: UploadFile = File(...)):
+    @staticmethod
+    async def upload_file(file: UploadFile = File(...)):
         """
                 ## Upload File
 
@@ -89,7 +90,8 @@ class DocumentDB:
 
         return JSONResponse(content=res, status_code=status.HTTP_200_OK)
 
-    async def list_files(self):
+    @staticmethod
+    async def list_files():
         """## List Files
 
         Lists all the files in the CouchDB database.
@@ -101,7 +103,8 @@ class DocumentDB:
             status_code=status.HTTP_200_OK,
         )
 
-    async def get_file(self, file_id):
+    @staticmethod
+    async def get_file(file_id):
         """## Get File
 
         Returns a file from the CouchDB database, using the specified `file_id`.
@@ -116,7 +119,8 @@ class DocumentDB:
         res = {"id": file_id, "content": file}
         return JSONResponse(content=res, status_code=status.HTTP_200_OK)
 
-    async def delete_file(self, file_id):
+    @staticmethod
+    async def delete_file(file_id):
         """## delete File
         Deletes a file from the CouchDB database, using the specified `file_id`."""
         retriever.DocumentDB("192.168.1.77", 5984).delete_document(file_id)
@@ -127,7 +131,8 @@ class DocumentDB:
             status_code=status.HTTP_200_OK,
         )
 
-    async def create_user(self, data: UserCreation = Body(...)):
+    @staticmethod
+    async def create_user(data: UserCreation = Body(...)):
         """## Create User
         Creates a new user in the CouchDB database.
         ```json

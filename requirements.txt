@@ -10,3 +10,4 @@ requests~=2.32.3
 python-dotenv~=1.0.1
 pytest~=8.3.2
 tiktoken~=0.7.0
+langchain-text-splitters~=0.2.2
