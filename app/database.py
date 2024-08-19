@@ -3,15 +3,23 @@
 """
 
 import hashlib
+from typing import List
 
 from dotenv import dotenv_values
 from fastapi import APIRouter, Body, File, HTTPException, status, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pipeline import retriever
 
 
+class FileMetadata(BaseModel):
+    category: str = Field(default="Wagner")
+    tags: list[str] = Field(default_factory=list)
+
+
+class Files(BaseModel):
+    meta_data: List[FileMetadata]
 class FileResponse(BaseModel):
     """Pydantic model for returning a file id"""
 
@@ -36,6 +44,7 @@ class DocumentDB:
         self.router.add_api_route(
             "/files/upload_pdf", self.upload_file, methods=["POST"], tags=["Files"]
         )
+        self.router.add_api_route("/files/upload_pdfs/", self.upload_files, methods=["POST"], tags=["Files"])
         self.router.add_api_route(
             "/files/list_files", self.list_files, methods=["GET"], tags=["Files"]
         )
@@ -51,6 +60,16 @@ class DocumentDB:
         self.router.add_api_route(
             "/db/add_user", self.create_user, methods=["PUT"], tags=["CouchDB"]
         )
+
+    @staticmethod
+    async def upload_files(files: List[UploadFile]):
+        res = []
+
+        doc = retriever.DocumentDB("192.168.1.77", 5984)
+        for file in files:
+            res.append(doc.add_document(file))
+
+        return res
 
     @staticmethod
     async def upload_file(file: UploadFile = File(...)):
