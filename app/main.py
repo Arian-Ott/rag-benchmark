@@ -1,3 +1,5 @@
+"""Main module. Here will be the entry point of the application."""
+
 import uvicorn
 from fastapi import FastAPI
 

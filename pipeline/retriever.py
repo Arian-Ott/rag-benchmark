@@ -1,4 +1,7 @@
+"""Class with functions related to retrieving data from the database or pdfs"""
+
 import base64
+import hashlib
 import os
 import time
 import zlib
@@ -6,11 +9,12 @@ import zlib
 import requests as re
 from dotenv import dotenv_values
 from fastapi import HTTPException
-from pypdf import PdfReader
+from pypdf import errors, PdfReader
 from tqdm import tqdm
 
 
 class DocumentDB:
+    """Use-Case specific class to connect to the CouchDB"""
     def __init__(self, host, port):
         try:
             self.secrets = dotenv_values("../.env")
@@ -24,24 +28,46 @@ class DocumentDB:
         self.url = f"http://{self.host}:{self.port}"
 
     def add_document(self, document):
+        """Adds a document to the CouchDB.
+        This function generates a unique id for each document.
+        The uid consists out of two parts:
+        `<title>-<current-timestamp>`
+
+        Since it is highly unlikely that someone will upload two identical documents at exactly the same time
+        I decided to use `time.time()` as a timestamp.
+
+        :param document: Document to be added to the CouchDB
+        :type document: file
+        :return: Meta-information about the added document
+        :rtype: dict
+        """
         try:
+            name = str(document.filename).replace(",", "-").replace(" ", "-")
+            ret = Extractor.from_bytes(document.file)
+            document = {"title": name, "content": ret}
+
             document["content"] = base64.b64encode(
                 zlib.compress(document["content"].encode("utf-8"), 9)
             ).decode("utf-8")
+            document["date"] = time.strftime("%Y-%m-%d-%H-%M-%S")
+            document["checksum"] = hashlib.sha3_256(document["content"].encode("utf-8")).hexdigest()
             response = re.put(
                 self.url + f'/docs/{document["title"]}-{document["date"]}',
                 json={
                     "title": document["title"],
                     "content": document["content"],
                     "date": document["date"],
+                    "timestamp": int(time.time()),
+                    "checksum": document["checksum"]
                 },
                 auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
             )
             response.raise_for_status()
         except re.RequestException as e:
             raise HTTPException(status_code=500, detail=str(e))
-        finally:
-            return {
+
+        return {
                 "document_id": f"{document['title']}-{document['date']}",
                 "db": "docs",
                 "message": "Document successfully added to CouchDB",
@@ -49,9 +75,18 @@ class DocumentDB:
             }
 
     def get_document(self, doc_id):
+        """Gets a document from the CouchDB using a document id.
+
+        :param doc_id: The document id (<title>-<current-timestamp>)
+        :type doc_id: str
+        :return: The document from the CouchDB
+        :rtype: dict
+        """
+
+
         try:
             response = re.get(
-                self.url + f"/docs/{doc_id}", auth=(self._user, self._password)
+                self.url + f"/docs/{doc_id}", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
             )
             response.raise_for_status()
             document = response.json()
@@ -69,7 +104,7 @@ class DocumentDB:
     def list_documents(self):
         try:
             response = re.get(
-                self.url + "/docs/_all_docs", auth=(self._user, self._password)
+                self.url + "/docs/_all_docs", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
             )
             response.raise_for_status()
             docs = response.json()
@@ -82,33 +117,79 @@ class DocumentDB:
             return []
 
     def delete_document(self, doc_id):
-        if not doc_id in self.list_documents():
+        """Deletes a document from the CouchDB.
+
+        :param doc_id: Document id (<title>-<current-timestamp>)
+        :type doc_id: str
+
+        :raise HTTPException: If the document is not found
+        """
+        if doc_id not in self.list_documents():
             raise HTTPException(
                 status_code=404,
                 detail="Document not found. Cannot delete a non-existing document.",
             )
         rev = self.get_document(doc_id)["_rev"]
         re.delete(
-            self.url + f"/docs/{doc_id}?rev={rev}", auth=(self._user, self._password)
+            self.url + f"/docs/{doc_id}?rev={rev}", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
         )
 
     def create_user(self, username, password, roles: list | tuple):
-        try:
-            print(re.get(self.url + f"/_users/org.couchdb.user:{username}").json())
+        """Creates a new user in the CouchDB.
 
-            if re.get(self.url + f"/_users/org.couchdb.user:{username}", auth=(self._user, self._password)).content is not None:
-                raise HTTPException(detail="User already exists", status_code=409)
-            re.post(url=self.url + "/_users/", data={"_id": f"org.couchdb.user:{username}", "name": username, "roles": roles, "type": "user", "password": password})
+
+        :param username: username of the user
+        :type username: str
+        :param password: password of the user
+        :type password: str
+        :param roles: a list of roles (most likely you want it to be empty)
+        :type roles: tuple|list
+
+        :raise HTTPException 409: If the user already exists
+        :raise HTTPException 500: If something unexpected happens
+        """
+        try:
+            d = dict(
+                re.get(
+                    self.url + f"/_users/org.couchdb.user:{username}",
+                    auth=(self._user, self._password),
+                    timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                ).json()
+            )
+
+            if d["name"] == username:
+                raise HTTPException(
+                    status_code=409, detail="User already exists. Abort."
+                )
+
+            headers = {"Accept": "application/json", "Content-Type": "application/json"}
+            data = {
+                "name": username,
+                "password": password,
+                "roles": roles,
+                "type": "user",
+            }
+
+            re.put(
+                self.url + f"/_users/org.couchdb.user:{username}",
+                json=data,
+                headers=headers,
+                auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+            )
 
         except re.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail={"message": str(e)})
+
+
 class Extractor:
+    """Extracts data from a PDF."""
     def __init__(self, inp):
         self.cur = 0
         self.nex = 1
         self.input_path = inp
 
-        if not os.path.exists(self.input_path) and type(inp) == str:
+        if not isinstance(os.path.exists(self.input_path), str):
             raise RuntimeError("Given Path does not exist!")
 
         # Filter out only PDF files
@@ -124,6 +205,12 @@ class Extractor:
 
     @staticmethod
     def from_bytes(inp):
+        """Converts a PDF from bytes to a str.
+        :param inp: PDF content
+        :type inp: bytes|str
+        :return: Converted PDF content
+        :rtype: str
+        """
         reader = PdfReader(inp)
         pdf_text = ""
         for page in reader.pages:
@@ -131,6 +218,10 @@ class Extractor:
         return pdf_text
 
     def extract(self):
+        """Extracts data from the previously added pdfs to text.
+
+
+        """
         if not self.pdf_files:
             raise RuntimeError("No PDF files found!")
 
@@ -145,11 +236,10 @@ class Extractor:
             total=len(self.paths_to_extract),
             desc="Extracting PDFs...",
         ):
-            try:
-                extracted_text = self._extract_text_from_pdf(path)
-                self.extracted_pdfs.append(extracted_text)
-            except Exception as e:
-                print(f"Failed to extract {path}: {e}")
+            extracted_text = self._extract_text_from_pdf(path)
+            self.extracted_pdfs.append(extracted_text)
+
+
 
     def _extract_text_from_pdf(self, pdf_path):
         text = ""
@@ -159,18 +249,29 @@ class Extractor:
                 # Iterate over each page
                 for page in reader.pages:
                     text += page.extract_text() or ""
+            self.files.append(
+                (pdf_path, os.path.basename(pdf_path).replace(" ", "-"), text)
+            )
+            return text
+
+        except FileNotFoundError as e:
+
+            raise HTTPException(status_code=404, detail=f"File not found. Stack trace {e}")
+        except errors.ParseError as e:
+
+            raise HTTPException(status_code=500, detail=str(e))
         except Exception as e:
-            raise RuntimeError(f"Failed to read PDF {pdf_path}: {e}")
-        self.files.append(
-            (pdf_path, os.path.basename(pdf_path).replace(" ", "-"), text)
-        )
-        return text
+
+            raise HTTPException(status_code=500, detail=str(e))
+
+
 
     def to_txt(self):
+        """Writes extracted data to a text file."""
         if not os.path.exists("../data/out"):
             os.mkdir("../data/out")
 
-        for pdf_path, new_name, text in tqdm(
+        for _, new_name, text in tqdm(
             self.files, desc="writing to " "text files..."
         ):
             new_name = new_name.replace(".pdf", "")

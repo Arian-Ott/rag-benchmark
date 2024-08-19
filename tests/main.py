@@ -30,14 +30,14 @@ def test_db(strinp):
     ), "Wrong embedding model"
     print("Test qdrant client")
     client = qdrant_client.QdrantClient("192.168.1.77")
-    client.create_collection(collection_name="test", vectors_config=models.VectorParams(
-        size=100, distance=models.Distance.COSINE))
-    assert client.collection_exists("test") == True, ("Collection does not "
-                                                      "exist")
+    client.create_collection(
+        collection_name="test",
+        vectors_config=models.VectorParams(size=100, distance=models.Distance.COSINE),
+    )
+    assert client.collection_exists("test") == True, "Collection does not " "exist"
 
     client.delete_collection("test")
-    assert client.collection_exists("test") == False, ("Collection does "
-                                                       "still exist")
+    assert client.collection_exists("test") == False, "Collection does " "still exist"
 
 
 if __name__ == "__main__":
