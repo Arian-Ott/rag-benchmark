@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 class DocumentDB:
     """Use-Case specific class to connect to the CouchDB"""
+
     def __init__(self, host, port):
         try:
             self.secrets = dotenv_values("../.env")
@@ -50,7 +51,9 @@ class DocumentDB:
                 zlib.compress(document["content"].encode("utf-8"), 9)
             ).decode("utf-8")
             document["date"] = time.strftime("%Y-%m-%d-%H-%M-%S")
-            document["checksum"] = hashlib.sha3_256(document["content"].encode("utf-8")).hexdigest()
+            document["checksum"] = hashlib.sha3_256(
+                document["content"].encode("utf-8")
+            ).hexdigest()
             response = re.put(
                 self.url + f'/docs/{document["title"]}-{document["date"]}',
                 json={
@@ -58,21 +61,21 @@ class DocumentDB:
                     "content": document["content"],
                     "date": document["date"],
                     "timestamp": int(time.time()),
-                    "checksum": document["checksum"]
+                    "checksum": document["checksum"],
                 },
                 auth=(self._user, self._password),
-                timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
             )
             response.raise_for_status()
         except re.RequestException as e:
             raise HTTPException(status_code=500, detail=str(e))
 
         return {
-                "document_id": f"{document['title']}-{document['date']}",
-                "db": "docs",
-                "message": "Document successfully added to CouchDB",
-                "timestamp": int(time.time()),
-            }
+            "document_id": f"{document['title']}-{document['date']}",
+            "db": "docs",
+            "message": "Document successfully added to CouchDB",
+            "timestamp": int(time.time()),
+        }
 
     def get_document(self, doc_id):
         """Gets a document from the CouchDB using a document id.
@@ -83,10 +86,11 @@ class DocumentDB:
         :rtype: dict
         """
 
-
         try:
             response = re.get(
-                self.url + f"/docs/{doc_id}", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                self.url + f"/docs/{doc_id}",
+                auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
             )
             response.raise_for_status()
             document = response.json()
@@ -104,7 +108,9 @@ class DocumentDB:
     def list_documents(self):
         try:
             response = re.get(
-                self.url + "/docs/_all_docs", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                self.url + "/docs/_all_docs",
+                auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
             )
             response.raise_for_status()
             docs = response.json()
@@ -131,7 +137,9 @@ class DocumentDB:
             )
         rev = self.get_document(doc_id)["_rev"]
         re.delete(
-            self.url + f"/docs/{doc_id}?rev={rev}", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
+            self.url + f"/docs/{doc_id}?rev={rev}",
+            auth=(self._user, self._password),
+            timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
         )
 
     def create_user(self, username, password, roles: list | tuple):
@@ -153,7 +161,7 @@ class DocumentDB:
                 re.get(
                     self.url + f"/_users/org.couchdb.user:{username}",
                     auth=(self._user, self._password),
-                    timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                    timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
                 ).json()
             )
 
@@ -175,7 +183,7 @@ class DocumentDB:
                 json=data,
                 headers=headers,
                 auth=(self._user, self._password),
-                timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
             )
 
         except re.exceptions.RequestException as e:
@@ -184,6 +192,7 @@ class DocumentDB:
 
 class Extractor:
     """Extracts data from a PDF."""
+
     def __init__(self, inp):
         self.cur = 0
         self.nex = 1
@@ -218,10 +227,7 @@ class Extractor:
         return pdf_text
 
     def extract(self):
-        """Extracts data from the previously added pdfs to text.
-
-
-        """
+        """Extracts data from the previously added pdfs to text."""
         if not self.pdf_files:
             raise RuntimeError("No PDF files found!")
 
@@ -239,8 +245,6 @@ class Extractor:
             extracted_text = self._extract_text_from_pdf(path)
             self.extracted_pdfs.append(extracted_text)
 
-
-
     def _extract_text_from_pdf(self, pdf_path):
         text = ""
         try:
@@ -256,7 +260,9 @@ class Extractor:
 
         except FileNotFoundError as e:
 
-            raise HTTPException(status_code=404, detail=f"File not found. Stack trace {e}")
+            raise HTTPException(
+                status_code=404, detail=f"File not found. Stack trace {e}"
+            )
         except errors.ParseError as e:
 
             raise HTTPException(status_code=500, detail=str(e))
@@ -264,16 +270,12 @@ class Extractor:
 
             raise HTTPException(status_code=500, detail=str(e))
 
-
-
     def to_txt(self):
         """Writes extracted data to a text file."""
         if not os.path.exists("../data/out"):
             os.mkdir("../data/out")
 
-        for _, new_name, text in tqdm(
-            self.files, desc="writing to " "text files..."
-        ):
+        for _, new_name, text in tqdm(self.files, desc="writing to " "text files..."):
             new_name = new_name.replace(".pdf", "")
             with open(f"../data/out/{new_name}" + ".txt", "w") as file:
                 file.write(text)

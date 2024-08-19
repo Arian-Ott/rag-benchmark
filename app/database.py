@@ -14,11 +14,13 @@ from pipeline import retriever
 
 class FileResponse(BaseModel):
     """Pydantic model for returning a file id"""
+
     file_id: str
 
 
 class UserCreation(BaseModel):
     """Pydantic model for creating a user"""
+
     username: str
     password: str
     authorisation: str
@@ -26,6 +28,7 @@ class UserCreation(BaseModel):
 
 class DocumentDB:
     """API Router for CouchDB functions"""
+
     def __init__(self):
         self.router = APIRouter()
 
@@ -80,12 +83,9 @@ class DocumentDB:
                 detail="Only PDF files are allowed.",
             )
 
-
         doc = retriever.DocumentDB("192.168.1.77", 5984)
 
         res = doc.add_document(file)
-
-
 
         return JSONResponse(content=res, status_code=status.HTTP_200_OK)
 

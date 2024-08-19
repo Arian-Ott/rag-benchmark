@@ -9,6 +9,7 @@ from .vector import Vectorstore
 
 class Embedding:
     """Embedding class."""
+
     def __init__(self, vector_store: Vectorstore):
         self.vector_store = vector_store
         self._temp_text = []
