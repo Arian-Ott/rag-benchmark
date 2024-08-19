@@ -2,6 +2,7 @@
 
 import openai
 from decouple import config
+from dotenv import dotenv_values
 from qdrant_client import QdrantClient
 
 
@@ -32,11 +33,18 @@ class Vectorstore:
                 self.dimensions = 1536
             case "text-embedding-3-large":
                 self.dimensions = 3072
+            case "text-embedding-ada-002-sweden":
+                self.dimensions = 1536
             case _:
+
                 raise ValueError("Unknown embedding model")
         self.embedding_model = embedding_model
 
         self.client = QdrantClient(host=host, port=port)
-        self.oai = openai.OpenAI(
+        if not self.embedding_model == "text-embedding-ada-002-sweden":
+            self.oai = openai.OpenAI(
             api_key=config("EMBEDDING"),
-        )
+            )
+        else:
+
+            self.oai = openai.AzureOpenAI(azure_endpoint=dotenv_values("../azure.env").get("URL"), api_key=dotenv_values("../azure.env").get("AOAI_ADA_KEY"), api_version=dotenv_values("../azure.env").get("API_VERSION"))
