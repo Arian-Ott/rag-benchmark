@@ -1,3 +1,5 @@
+"""Module which manages Qdrant collections"""
+
 from qdrant_client import models
 
 from .vector import Vectorstore

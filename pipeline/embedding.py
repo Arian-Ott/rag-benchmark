@@ -1,19 +1,34 @@
+"""Module related to Vector Embedding."""
+
 import time
-import uuid
+
+from qdrant_client.models import PointStruct
 
 from .vector import Vectorstore
-from qdrant_client.models import PointStruct
 
 
 class Embedding:
+    """Embedding class."""
     def __init__(self, vector_store: Vectorstore):
         self.vector_store = vector_store
         self._temp_text = []
 
     def add_text(self, text: str):
+        """Add text to the embedding queue.
+        :param text: text to be added
+        :type text: str
+        """
         self._temp_text.append(text)
 
     def embedding(self, text: str | None = None):
+        """Embed text from the embedding queue.
+
+        :param text: If you want to embed text directly, you can use this parameter to do so.
+            Most of the time, it is supposed to be `None`
+        :type text: str | None
+        :return: list of VectorPoints of the embedded text
+        :rtype: list
+        """
         if text is None:
             texts = self._temp_text
         else:

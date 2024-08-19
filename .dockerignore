@@ -1,5 +1,5 @@
 .venv
-
+passwords
 .idea
 qdrant_storage
 .gitignore

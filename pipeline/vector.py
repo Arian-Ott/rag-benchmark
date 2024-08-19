@@ -1,11 +1,8 @@
+"""Module with all classes about Vector"""
+
 import openai
-
-from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance
-
-
 from decouple import config
-from setuptools.warnings import InformationOnly
+from qdrant_client import QdrantClient
 
 
 class Vectorstore:
