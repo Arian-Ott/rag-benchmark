@@ -1,4 +1,5 @@
 """Module related to Vector Embedding."""
+
 import time
 
 from qdrant_client import models
@@ -37,8 +38,7 @@ class Embedding:
             raise ValueError("No text provided for embedding.")
 
         embedding_results = self.vector_store.oai.embeddings.create(
-            input=texts_to_embed,
-            model=self.vector_store.embedding_model
+            input=texts_to_embed, model=self.vector_store.embedding_model
         )
 
         points = self._create_vector_points(embedding_results.data, texts_to_embed)

@@ -56,13 +56,17 @@ class DocumentDB:
         """Prepare document metadata and content for storage."""
         name = document.filename.replace(",", "-").replace(" ", "-")
         content = Extractor.from_bytes(document.file)
-        compressed_content = base64.b64encode(zlib.compress(content.encode("utf-8"), 9)).decode("utf-8")
+        compressed_content = base64.b64encode(
+            zlib.compress(content.encode("utf-8"), 9)
+        ).decode("utf-8")
 
         return {
             "title": name,
             "content": compressed_content,
             "date": time.strftime("%Y-%m-%d-%H-%M-%S"),
-            "checksum": hashlib.sha3_256(compressed_content.encode("utf-8")).hexdigest()
+            "checksum": hashlib.sha3_256(
+                compressed_content.encode("utf-8")
+            ).hexdigest(),
         }
 
     def _upload_document(self, document: dict):
@@ -107,7 +111,10 @@ class DocumentDB:
             document["content"] = self._decompress_content(document["content"])
             return document
         except re.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"An error occurred while retrieving the document: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred while retrieving the document: {e}",
+            )
 
     def _decompress_content(self, content: str) -> str:
         """Decompress and decode the document content."""
@@ -124,7 +131,10 @@ class DocumentDB:
             response.raise_for_status()
             return [row["id"] for row in response.json().get("rows", [])]
         except re.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"An error occurred while listing documents: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred while listing documents: {e}",
+            )
 
     def delete_document(self, doc_id: str):
         """Delete a document from CouchDB."""
@@ -141,7 +151,9 @@ class DocumentDB:
                 timeout=int(self.secrets.get("DEFAULT_TIMEOUT", 30)),
             )
         except re.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to delete document: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to delete document: {e}"
+            )
 
     def create_user(self, username: str, password: str, roles: list | tuple):
         """Create a new user in CouchDB."""
@@ -162,7 +174,12 @@ class DocumentDB:
 
     def _add_user_to_db(self, username: str, password: str, roles: list | tuple):
         try:
-            data = {"name": username, "password": password, "roles": roles, "type": "user"}
+            data = {
+                "name": username,
+                "password": password,
+                "roles": roles,
+                "type": "user",
+            }
             headers = {"Accept": "application/json", "Content-Type": "application/json"}
             re.put(
                 f"{self.url}/_users/org.couchdb.user:{username}",
@@ -213,7 +230,11 @@ class Extractor:
             for pdf_file in self.pdf_files
             for pdf in pdf_file[1]
         ]
-        for path in tqdm(self.paths_to_extract, total=len(self.paths_to_extract), desc="Extracting PDFs..."):
+        for path in tqdm(
+                self.paths_to_extract,
+                total=len(self.paths_to_extract),
+                desc="Extracting PDFs...",
+        ):
             extracted_text = self._extract_text_from_pdf(path)
             self.extracted_pdfs.append(extracted_text)
 
@@ -226,7 +247,9 @@ class Extractor:
         except (FileNotFoundError, errors.ParseError) as e:
             raise HTTPException(status_code=500, detail=str(e))
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"An unexpected error occurred: {e}"
+            )
 
     def to_txt(self, output_dir="../data/out"):
         """Write extracted text to text files."""

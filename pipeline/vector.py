@@ -33,7 +33,7 @@ class Vectorstore:
             "text-embedding-3-small": 1536,
             "text-embedding-ada-002": 1536,
             "text-embedding-3-large": 3072,
-            "text-embedding-ada-002-sweden": 1536
+            "text-embedding-ada-002-sweden": 1536,
         }
         try:
             return model_dimensions[embedding_model]
@@ -52,7 +52,7 @@ class Vectorstore:
             return openai.AzureOpenAI(
                 azure_endpoint=azure_env.get("URL"),
                 api_key=azure_env.get("AOAI_ADA_KEY"),
-                api_version=azure_env.get("API_VERSION")
+                api_version=azure_env.get("API_VERSION"),
             )
         else:
             return openai.OpenAI(api_key=config("EMBEDDING"))
