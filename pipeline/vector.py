@@ -1,8 +1,7 @@
 """Module with all classes related to Vector operations."""
 
-import openai
-from decouple import config
 from dotenv import dotenv_values
+from openai import AzureOpenAI
 from qdrant_client import QdrantClient
 
 from passwords import pw
@@ -33,7 +32,7 @@ class Vectorstore:
             "text-embedding-3-small": 1536,
             "text-embedding-ada-002": 1536,
             "text-embedding-3-large": 3072,
-            "text-embedding-ada-002-sweden": 1536
+            "text-embedding-ada-002-sweden": 1536,
         }
         try:
             return model_dimensions[embedding_model]
@@ -48,11 +47,12 @@ class Vectorstore:
     def _initialize_openai_client(self):
         """Initialize and return an OpenAI client instance based on the selected embedding model."""
         if self.embedding_model == "text-embedding-ada-002-sweden":
-            azure_env = dotenv_values("../azure.env")
-            return openai.AzureOpenAI(
+            azure_env = dict(dotenv_values("../azure.env"))
+
+            a = AzureOpenAI(
                 azure_endpoint=azure_env.get("URL"),
                 api_key=azure_env.get("AOAI_ADA_KEY"),
-                api_version=azure_env.get("API_VERSION")
+                api_version=azure_env.get("API_VERSION"),
             )
-        else:
-            return openai.OpenAI(api_key=config("EMBEDDING"))
+
+            return a

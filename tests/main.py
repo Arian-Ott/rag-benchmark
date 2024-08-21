@@ -59,8 +59,7 @@ def test_chunking():
     chunk_1.tokenise(t1)
     chunk_2.tokenise(t2)
     print("TEST: Equality Check")
-    assert (
-            chunk_1 != chunk_2
+    assert (chunk_1 != chunk_2
     ), "Different Chunk Objects are supposed to be different with different input text"
     print("TEST: Check for readable function")
     chunk_1.chunk()

@@ -27,18 +27,33 @@ class DocumentDBRouter:
         return retriever.DocumentDB(host=host, port=port)
 
     def _register_routes(self):
-        self.router.add_api_route("/files/upload_pdf", self.upload_file, methods=["POST"], tags=["Files"])
-        self.router.add_api_route("/files/upload_pdfs/", self.upload_files, methods=["POST"], tags=["Files"])
-        self.router.add_api_route("/files/list_files", self.list_files, methods=["GET"], tags=["Files"])
-        self.router.add_api_route("/files/get_file/{file_id}", self.get_file, methods=["GET"], tags=["Files"])
-        self.router.add_api_route("/files/delete_file/{file_id}", self.delete_file, methods=["DELETE"], tags=["Files"])
-        self.router.add_api_route("/db/add_user", self.create_user, methods=["PUT"], tags=["CouchDB"])
+        self.router.add_api_route(
+            "/files/upload_pdf", self.upload_file, methods=["POST"], tags=["Files"]
+        )
+        self.router.add_api_route(
+            "/files/upload_pdfs/", self.upload_files, methods=["POST"], tags=["Files"]
+        )
+        self.router.add_api_route(
+            "/files/list_files", self.list_files, methods=["GET"], tags=["Files"]
+        )
+        self.router.add_api_route(
+            "/files/get_file/{file_id}", self.get_file, methods=["GET"], tags=["Files"]
+        )
+        self.router.add_api_route(
+            "/files/delete_file/{file_id}",
+            self.delete_file,
+            methods=["DELETE"],
+            tags=["Files"],
+        )
+        self.router.add_api_route(
+            "/db/add_user", self.create_user, methods=["PUT"], tags=["CouchDB"]
+        )
 
     def _check_bg_task(self):
         if self.rag.bg_running:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Currently running an indexing job. Please wait a few minutes."
+                detail="Currently running an indexing job. Please wait a few minutes.",
             )
 
     async def upload_files(self, files: List[UploadFile]):
@@ -107,11 +122,13 @@ class DocumentDBRouter:
         if file_id not in files:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"File not found. Your file ID was: {file_id}"
+                detail=f"File not found. Your file ID was: {file_id}",
             )
 
         file = self.doc_db.get_document(file_id)
-        return JSONResponse(content={"id": file_id, "content": file}, status_code=status.HTTP_200_OK)
+        return JSONResponse(
+            content={"id": file_id, "content": file}, status_code=status.HTTP_200_OK
+        )
 
     async def delete_file(self, file_id: str):
         """
@@ -128,7 +145,9 @@ class DocumentDBRouter:
         self._check_bg_task()
         self.doc_db.delete_document(file_id)
         return JSONResponse(
-            content={"message": f"Successfully deleted document {file_id} from CouchDB"},
+            content={
+                "message": f"Successfully deleted document {file_id} from CouchDB"
+            },
             status_code=status.HTTP_200_OK,
         )
 
@@ -148,14 +167,20 @@ class DocumentDBRouter:
         - `HTTPException`: If the authorization is invalid.
         """
         env_values = dotenv_values("../.env")
-        if hashlib.sha3_512(data.authorisation.encode("utf-8")).hexdigest() != env_values["COUCH_DB_ACCESS_HASH"]:
+        if (hashlib.sha3_512(data.authorisation.encode("utf-8")).hexdigest() != env_values[
+            "COUCH_DB_ACCESS_HASH"]
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials. Abort.",
             )
 
-        self.doc_db.create_user(username=data.username, password=data.password, roles=["user"])
+        self.doc_db.create_user(
+            username=data.username, password=data.password, roles=["user"]
+        )
         return JSONResponse(
-            content={"message": f"User with the username {data.username} created successfully."},
+            content={
+                "message": f"User with the username {data.username} created successfully."
+            },
             status_code=status.HTTP_201_CREATED,
         )
