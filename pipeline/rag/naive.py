@@ -32,8 +32,8 @@ class NaiveRagGPT4:
                 ),
             )
 
-        self.router.add_api_route(
-            "/rag/query", self.query, methods=["POST"], tags=["NaiveRag"]
+        self.router.add_api_route("/rag/naive-rag/query", self.query, methods=["POST"],
+            tags=["NaiveRag"]
         )
 
     def embed_text(self, text: str) -> List[float]:
@@ -58,12 +58,11 @@ class NaiveRagGPT4:
         prompt = f"Context: {context}\n\nQuery: {query}\n\nAnswer:"
 
         try:
-            response = self.client.chat.completions.create(
-                temperature=0.1,
-                model="gpt-4o-sweden",
-                messages=[
-                    {"role": "user", "content": prompt},
-                ], ).choices[0].message.content
+            response = (self.client.chat.completions.create(temperature=0.1, model="gpt-4o-sweden",
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }, ], ).choices[0].message.content)
 
             return response
         except Exception as e:

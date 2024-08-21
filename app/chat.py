@@ -1,7 +1,9 @@
 """Module for chat api"""
 
+import requests as re
+import xkcd
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from models import Prompt
 
@@ -17,6 +19,31 @@ class Chat:
         self.router.add_api_route(
             "/chat/prompt", self.prompt, methods=["POST"], tags=["Chat"]
         )
+        self.router.add_api_route("/chat/xkcd", self.xkcd_meme, tags=["Chat"], methods=["GET"],
+            responses={
+                200: {
+                    "content": {
+                        "image/png": {}
+                    }
+                }
+            }, response_class=Response, )
+
+    async def xkcd_meme(self):
+        """## xkcd meme
+        This endpoint is a small implementation of the famous cartoonist xkcd. Everyone knows their cartoons.
+        Check the headers of the response for more information.
+
+        """
+        meme = xkcd.getRandomComic()
+
+        img = re.get(meme.getImageLink(), timeout=300).content
+        return Response(content=img.__bytes__(), media_type="image/png", headers={
+            "x-image_name": meme.imageName,
+            "x-image-url": meme.getImageLink(),
+            "x-get-explaination": meme.getExplanation(),
+            "x-get-link": meme.link,
+            "x-disclaimer": "All rights belong to their respective owner.",
+        }, )
 
     async def hello(self, name: str):
         return JSONResponse({"mesage": f"Hello, {name}!"})
