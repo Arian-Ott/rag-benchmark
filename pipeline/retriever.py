@@ -1,4 +1,4 @@
-"""Class with functions related to retrieving data from the database or pdfs"""
+"""Module with all classes related to retrieving data from databases or PDFs."""
 
 import base64
 import hashlib
@@ -14,279 +14,245 @@ from tqdm import tqdm
 
 
 class DocumentDB:
-    """Use-Case specific class to connect to the CouchDB"""
-    def __init__(self, host, port):
-        try:
-            self.secrets = dotenv_values("../.env")
-            self._user = self.secrets["COUCH_DB_USER"]
-            self._password = self.secrets["COUCH_DB_SECRET"]
-        except KeyError as e:
-            raise Exception("Missing environment variable") from e
+    """Handles operations with CouchDB for storing and retrieving documents."""
 
+    def __init__(self, host: str, port: int):
+        """Initialize the DocumentDB with the specified host and port."""
+        self.secrets = dotenv_values("../.env")
+        self._user = self._get_env_variable("COUCH_DB_USER")
+        self._password = self._get_env_variable("COUCH_DB_SECRET")
         self.host = host
         self.port = port
-        self.url = f"http://{self.host}:{self.port}"
+        self.url = self._construct_url()
 
-    def add_document(self, document):
-        """Adds a document to the CouchDB.
-        This function generates a unique id for each document.
-        The uid consists out of two parts:
-        `<title>-<current-timestamp>`
+    def _get_env_variable(self, key: str) -> str:
+        try:
+            return self.secrets[key]
+        except KeyError as e:
+            raise Exception(f"Missing environment variable: {key}") from e
 
-        Since it is highly unlikely that someone will upload two identical documents at exactly the same time
-        I decided to use `time.time()` as a timestamp.
+    def _construct_url(self) -> str:
+        """Construct the appropriate CouchDB URL based on the environment."""
+        if bool(self.secrets.get("PROD")):
+            return "https://couch-db.arianott.com"
+        return f"http://{self.host}:{self.port}"
 
-        :param document: Document to be added to the CouchDB
-        :type document: file
-        :return: Meta-information about the added document
-        :rtype: dict
+    def add_document(self, document) -> dict:
+        """
+        Adds a document to the CouchDB.
+
+        :param document: Document file to be added to the database.
+        :return: Meta-information about the added document.
         """
         try:
-            name = str(document.filename).replace(",", "-").replace(" ", "-")
-            ret = Extractor.from_bytes(document.file)
-            document = {"title": name, "content": ret}
-
-            document["content"] = base64.b64encode(
-                zlib.compress(document["content"].encode("utf-8"), 9)
-            ).decode("utf-8")
-            document["date"] = time.strftime("%Y-%m-%d-%H-%M-%S")
-            document["checksum"] = hashlib.sha3_256(document["content"].encode("utf-8")).hexdigest()
-            response = re.put(
-                self.url + f'/docs/{document["title"]}-{document["date"]}',
-                json={
-                    "title": document["title"],
-                    "content": document["content"],
-                    "date": document["date"],
-                    "timestamp": int(time.time()),
-                    "checksum": document["checksum"]
-                },
-                auth=(self._user, self._password),
-                timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
-            )
+            doc_info = self._prepare_document(document)
+            response = self._upload_document(doc_info)
             response.raise_for_status()
+            return self._construct_response(doc_info)
         except re.RequestException as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    def _prepare_document(self, document) -> dict:
+        """Prepare document metadata and content for storage."""
+        name = document.filename.replace(",", "-").replace(" ", "-")
+        content = Extractor.from_bytes(document.file)
+        compressed_content = base64.b64encode(
+            zlib.compress(content.encode("utf-8"), 9)
+        ).decode("utf-8")
+
         return {
-                "document_id": f"{document['title']}-{document['date']}",
-                "db": "docs",
-                "message": "Document successfully added to CouchDB",
+            "title": name,
+            "content": compressed_content,
+            "date": time.strftime("%Y-%m-%d-%H-%M-%S"),
+            "checksum": hashlib.sha3_256(
+                compressed_content.encode("utf-8")
+            ).hexdigest(),
+        }
+
+    def _upload_document(self, document: dict):
+        """Upload the prepared document to CouchDB."""
+        return re.put(
+            f'{self.url}/docs/{document["title"]}-{document["date"]}',
+            json={
+                "title": document["title"],
+                "content": document["content"],
+                "date": document["date"],
                 "timestamp": int(time.time()),
-            }
+                "checksum": document["checksum"],
+            },
+            auth=(self._user, self._password),
+            timeout=int(self.secrets.get("DEFAULT_TIMEOUT", 30)),
+        )
 
-    def get_document(self, doc_id):
-        """Gets a document from the CouchDB using a document id.
+    def _construct_response(self, document: dict) -> dict:
+        """Construct a response with metadata about the uploaded document."""
+        return {
+            "document_id": f'{document["title"]}-{document["date"]}',
+            "db": "docs",
+            "message": "Document successfully added to CouchDB",
+            "timestamp": int(time.time()),
+        }
 
-        :param doc_id: The document id (<title>-<current-timestamp>)
-        :type doc_id: str
-        :return: The document from the CouchDB
-        :rtype: dict
+    def get_document(self, doc_id: str) -> dict:
         """
+        Retrieve a document from CouchDB using its ID.
 
-
+        :param doc_id: Document ID.
+        :return: The document data.
+        """
         try:
             response = re.get(
-                self.url + f"/docs/{doc_id}", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                f"{self.url}/docs/{doc_id}",
+                auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT", 30)),
             )
             response.raise_for_status()
             document = response.json()
-
-            # Decode and decompress the content
-            document["content"] = zlib.decompress(
-                base64.b64decode(document["content"])
-            ).decode("utf-8")
-
+            document["content"] = self._decompress_content(document["content"])
             return document
-        except re.exceptions.RequestException as e:
-            print(f"An error occurred while retrieving the document: {e}")
-            return None
+        except re.RequestException as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred while retrieving the document: {e}",
+            )
 
-    def list_documents(self):
+    def _decompress_content(self, content: str) -> str:
+        """Decompress and decode the document content."""
+        return zlib.decompress(base64.b64decode(content)).decode("utf-8")
+
+    def list_documents(self) -> list:
+        """List all document IDs in CouchDB."""
         try:
             response = re.get(
-                self.url + "/docs/_all_docs", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                f"{self.url}/docs/_all_docs",
+                auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT", 30)),
             )
             response.raise_for_status()
-            docs = response.json()
+            return [row["id"] for row in response.json().get("rows", [])]
+        except re.RequestException as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred while listing documents: {e}",
+            )
 
-            # Extract and return the list of document IDs
-            doc_ids = [row["id"] for row in docs["rows"]]
-            return doc_ids
-        except re.exceptions.RequestException as e:
-            print(f"An error occurred while listing documents: {e}")
-            return []
-
-    def delete_document(self, doc_id):
-        """Deletes a document from the CouchDB.
-
-        :param doc_id: Document id (<title>-<current-timestamp>)
-        :type doc_id: str
-
-        :raise HTTPException: If the document is not found
-        """
+    def delete_document(self, doc_id: str):
+        """Delete a document from CouchDB."""
         if doc_id not in self.list_documents():
             raise HTTPException(
                 status_code=404,
                 detail="Document not found. Cannot delete a non-existing document.",
             )
         rev = self.get_document(doc_id)["_rev"]
-        re.delete(
-            self.url + f"/docs/{doc_id}?rev={rev}", auth=(self._user, self._password), timeout=int(self.secrets.get("DEFAULT_TIMEOUT")),
-        )
-
-    def create_user(self, username, password, roles: list | tuple):
-        """Creates a new user in the CouchDB.
-
-
-        :param username: username of the user
-        :type username: str
-        :param password: password of the user
-        :type password: str
-        :param roles: a list of roles (most likely you want it to be empty)
-        :type roles: tuple|list
-
-        :raise HTTPException 409: If the user already exists
-        :raise HTTPException 500: If something unexpected happens
-        """
         try:
-            d = dict(
-                re.get(
-                    self.url + f"/_users/org.couchdb.user:{username}",
-                    auth=(self._user, self._password),
-                    timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
-                ).json()
+            re.delete(
+                f"{self.url}/docs/{doc_id}?rev={rev}",
+                auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT", 30)),
+            )
+        except re.RequestException as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to delete document: {e}"
             )
 
-            if d["name"] == username:
-                raise HTTPException(
-                    status_code=409, detail="User already exists. Abort."
-                )
+    def create_user(self, username: str, password: str, roles: list | tuple):
+        """Create a new user in CouchDB."""
+        if self._user_exists(username):
+            raise HTTPException(status_code=409, detail="User already exists. Abort.")
+        self._add_user_to_db(username, password, roles)
 
-            headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    def _user_exists(self, username: str) -> bool:
+        try:
+            response = re.get(
+                f"{self.url}/_users/org.couchdb.user:{username}",
+                auth=(self._user, self._password),
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT", 30)),
+            )
+            return response.json().get("name") == username
+        except re.RequestException:
+            return False
+
+    def _add_user_to_db(self, username: str, password: str, roles: list | tuple):
+        try:
             data = {
                 "name": username,
                 "password": password,
                 "roles": roles,
                 "type": "user",
             }
-
+            headers = {"Accept": "application/json", "Content-Type": "application/json"}
             re.put(
-                self.url + f"/_users/org.couchdb.user:{username}",
+                f"{self.url}/_users/org.couchdb.user:{username}",
                 json=data,
                 headers=headers,
                 auth=(self._user, self._password),
-                timeout=int(self.secrets.get("DEFAULT_TIMEOUT"))
+                timeout=int(self.secrets.get("DEFAULT_TIMEOUT", 30)),
             )
-
-        except re.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail={"message": str(e)})
+        except re.RequestException as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create user: {e}")
 
 
 class Extractor:
-    """Extracts data from a PDF."""
-    def __init__(self, inp):
+    """Handles PDF extraction operations."""
+
+    def __init__(self, input_path: str):
         self.cur = 0
-        self.nex = 1
-        self.input_path = inp
-
-        if not isinstance(os.path.exists(self.input_path), str):
-            raise RuntimeError("Given Path does not exist!")
-
-        # Filter out only PDF files
-        self.pdf_files = []
-        for root, _, files in os.walk(self.input_path):
-            pdfs = [f for f in files if f.lower().endswith(".pdf")]
-            if pdfs:
-                self.pdf_files.append((root, pdfs))
-
+        self.input_path = input_path
+        self.pdf_files = self._get_pdf_files()
         self.extracted_pdfs = []
         self.paths_to_extract = []
         self.files = []
 
+    def _get_pdf_files(self) -> list:
+        """Retrieve all PDF files from the specified directory."""
+        if not os.path.exists(self.input_path):
+            raise RuntimeError("Given Path does not exist!")
+
+        pdf_files = []
+        for root, _, files in os.walk(self.input_path):
+            pdfs = [f for f in files if f.lower().endswith(".pdf")]
+            if pdfs:
+                pdf_files.append((root, pdfs))
+        return pdf_files
+
     @staticmethod
-    def from_bytes(inp):
-        """Converts a PDF from bytes to a str.
-        :param inp: PDF content
-        :type inp: bytes|str
-        :return: Converted PDF content
-        :rtype: str
-        """
+    def from_bytes(inp: bytes) -> str:
+        """Extract text from a PDF provided as bytes."""
         reader = PdfReader(inp)
-        pdf_text = ""
-        for page in reader.pages:
-            pdf_text += page.extract_text()
-        return pdf_text
+        return "".join(page.extract_text() for page in reader.pages)
 
     def extract(self):
-        """Extracts data from the previously added pdfs to text.
-
-
-        """
+        """Extract text from the collected PDF files."""
         if not self.pdf_files:
             raise RuntimeError("No PDF files found!")
-
         self.paths_to_extract = [
             os.path.join(pdf_file[0], pdf)
             for pdf_file in self.pdf_files
             for pdf in pdf_file[1]
         ]
-
-        for path in tqdm(
-            self.paths_to_extract,
-            total=len(self.paths_to_extract),
-            desc="Extracting PDFs...",
+        for path in tqdm(self.paths_to_extract, total=len(self.paths_to_extract),
+                desc="Extracting PDFs...",
         ):
             extracted_text = self._extract_text_from_pdf(path)
             self.extracted_pdfs.append(extracted_text)
 
-
-
-    def _extract_text_from_pdf(self, pdf_path):
-        text = ""
+    def _extract_text_from_pdf(self, pdf_path: str) -> str:
+        """Extract text from a single PDF file."""
         try:
             with open(pdf_path, "rb") as file:
                 reader = PdfReader(file)
-                # Iterate over each page
-                for page in reader.pages:
-                    text += page.extract_text() or ""
-            self.files.append(
-                (pdf_path, os.path.basename(pdf_path).replace(" ", "-"), text)
-            )
-            return text
-
-        except FileNotFoundError as e:
-
-            raise HTTPException(status_code=404, detail=f"File not found. Stack trace {e}")
-        except errors.ParseError as e:
-
+                return "".join(page.extract_text() for page in reader.pages)
+        except (FileNotFoundError, errors.ParseError) as e:
             raise HTTPException(status_code=500, detail=str(e))
         except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"An unexpected error occurred: {e}"
+            )
 
-            raise HTTPException(status_code=500, detail=str(e))
-
-
-
-    def to_txt(self):
-        """Writes extracted data to a text file."""
-        if not os.path.exists("../data/out"):
-            os.mkdir("../data/out")
-
-        for _, new_name, text in tqdm(
-            self.files, desc="writing to " "text files..."
-        ):
+    def to_txt(self, output_dir="../data/out"):
+        """Write extracted text to text files."""
+        os.makedirs(output_dir, exist_ok=True)
+        for _, new_name, text in tqdm(self.files, desc="Writing to text files..."):
             new_name = new_name.replace(".pdf", "")
-            with open(f"../data/out/{new_name}" + ".txt", "w") as file:
+            with open(os.path.join(output_dir, f"{new_name}.txt"), "w") as file:
                 file.write(text)
-
-    def __iter__(self):
-        return iter(self.extracted_pdfs)
-
-    def __len__(self):
-        return len(self.extracted_pdfs)
-
-    def __next__(self):
-        if self.cur >= len(self.extracted_pdfs):
-            raise StopIteration
-        self.cur += 1
-
-        return self.extracted_pdfs[self.cur]

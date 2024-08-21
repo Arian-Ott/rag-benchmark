@@ -4,13 +4,28 @@ import uvicorn
 from fastapi import FastAPI
 
 from chat import Chat
-from database import DocumentDB
+from database import DocumentDBRouter
+from pipeline.rag import AdvancedRAG, NaiveRagGPT4
+from rag_api import RagApi
 
 app = FastAPI()
+#
 cht = Chat()
-db = DocumentDB()
-app.include_router(cht.router)
-app.include_router(db.router)
+#
+rapi = RagApi()
+gpt4 = NaiveRagGPT4()
+adv = AdvancedRAG()
+#
+db = DocumentDBRouter(rapi)
 
+#
+app.include_router(cht.router)
+#
+app.include_router(db.router)
+#
+app.include_router(rapi.router)
+app.include_router(gpt4.router)
+app.include_router(adv.router)
+# Start the automatic rate limit handler
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=6969)

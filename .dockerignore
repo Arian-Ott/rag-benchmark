@@ -6,3 +6,9 @@ qdrant_storage
 README.md
 **/__pycache__
 data/out
+*.env
+*.http
+CODEOWNERS
+CONTRIBUTORS
+
+
