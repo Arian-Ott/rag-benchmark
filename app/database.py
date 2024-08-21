@@ -7,8 +7,8 @@ from dotenv import dotenv_values
 from fastapi import APIRouter, Body, File, HTTPException, status, UploadFile
 from fastapi.responses import JSONResponse
 
-from models import UserCreation
 from pipeline import retriever
+from .models import UserCreation
 
 
 class DocumentDBRouter:

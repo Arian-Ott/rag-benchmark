@@ -1,12 +1,13 @@
 .venv
-passwords
+
 .idea
 qdrant_storage
 .gitignore
 README.md
 **/__pycache__
 data/out
-*.env
+.github
+tests
 *.http
 CODEOWNERS
 CONTRIBUTORS

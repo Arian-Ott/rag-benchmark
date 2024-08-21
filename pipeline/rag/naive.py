@@ -70,7 +70,12 @@ class NaiveRagGPT4:
             raise HTTPException(status_code=500, detail="Failed to generate response.")
 
     async def query(self, query_text: str):
-        """Handle a query by performing the full RAG process."""
+        """## Naive RAG
+        This is the naive RAG implementation.
+
+        >INFO
+        >Try asking the AI about the documents in the DB. To get a list of all documents, just use the `list_files` endpoint.
+        """
         logging.info(f"Received query: {query_text}")
 
         try:

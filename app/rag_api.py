@@ -2,6 +2,7 @@ import logging
 import os
 import uuid
 from asyncio import gather, sleep, to_thread
+from http import HTTPStatus
 
 import tiktoken
 from dotenv import dotenv_values
@@ -28,10 +29,18 @@ class RagApi:
         self._initialize_routes()
         self._initialize_vectorstore()
 
+
     def _initialize_routes(self):
+
         self.router.add_api_route(
             "/rag/update-index", self.index_all_files, methods=["GET"], tags=["RagAPI"]
         )
+        self.router.add_api_route("/rag/check-background", self.check_background, methods=["GET"],
+                                  tags=["RagAPI"], status_code=200)
+        self.router.add_api_route("/rag/create-index", self.create_qdrant, methods=["POST"],
+                                  tags=["RagAPI"], status_code=HTTPStatus.CREATED)
+        self.router.add_api_route("/rag/delete-index", self.delete_qdrant, methods=["DELETE"],
+                                  tags=["RagAPI"], status_code=HTTPStatus.NO_CONTENT)
 
     def _initialize_vectorstore(self):
         if not self.vs.client.collection_exists("text-embedding-3-small"):
@@ -45,12 +54,35 @@ class RagApi:
     def _chunk_text(self, text, max_tokens=300, model_name="text-embedding-ada-002"):
         tokenizer = tiktoken.encoding_for_model(model_name)
 
-        tokens = tokenizer.encode(text, allowed_special="all")
+        tokens = tokenizer.encode(text)
         return [tokenizer.decode(tokens[i: i + max_tokens])
             for i in range(0, len(tokens), max_tokens)
         ]
 
     async def index_all_files(self, background_tasks: BackgroundTasks):
+        """# Please READ before running the job!!!
+
+        ## Indexing
+        The `indexing` endpoint updates the Vector store with new files. All data stored in the Qdrant will be deleted at the beginning of the index job.
+        This decision is based on several factors:
+        1. Space efficiency
+        2. Prevention of redundant entries (which could lead to a bias)
+        3. Design of the infrastructure
+
+        Indexing several PDF documents is ressource intensive and involves more than 4 different Services throughout the entire process.
+        As an example, all files are stored in my `couch DB`. Retrieving the files is only possible with a `GET` request, which will then be decompressed.
+        The decompressed content will be then sent to the Azure OpenAI ADA-002 embedding model. Due to rate limits and other reasons this can take a **long time**.
+        Once the vector embedding is done (this takes long) all vectors are directly sent to the Qdrant DB with multiple threads.
+
+        ## INFORMATION
+        - This endpoint **DELETES** all content of the Qdrant DB (this is okay)
+        - The endpoint needs some minutes (roughly 2-5) depending on the amount of documents
+        - During the indexing are some database activites DISABLED. You will get a HTTP error saying Conflict.
+        - Make sure to upload your content BEFORE the indexing. Otherwise the DB will be blocked and you will have to wait.
+
+        """
+
+
         if self.bg_running:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -152,3 +184,43 @@ class RagApi:
                 await self._process_chunk_batch(points, file)
 
         logging.info(f"Document processing completed for: {file}")
+
+    async def delete_qdrant(self):
+        """## Delete Qdrant
+        Deletes the whole collection. This is used to make sure all data is clean after you added new files."""
+        if self.vs.client.collection_exists("text-embedding-3-small"):
+            self.vs.client.delete_collection("text-embedding-3-small")
+
+        self.vs.client.create_collection("text-embedding-3-small",
+                                         models.VectorParams(size=self.vs.dimensions,
+                                                             distance=models.Distance.COSINE), )
+        return {
+            "message": "Deleted Qdrant collection"
+        }
+
+    async def create_qdrant(self):
+        """## Create Qdrant Collection
+        In rare cases you need to manually create the collection.
+        """
+        if self.vs.client.collection_exists("text-embedding-3-small"):
+            raise HTTPException(status_code=400, detail="Collection already exists")
+        self.vs.client.create_collection("text-embedding-3-small",
+                                         models.VectorParams(size=self.vs.dimensions,
+                                                             distance=models.Distance.COSINE), )
+        return {
+            "status": "Created Qdrant collection"
+        }
+
+    async def check_background(self):
+        """## Background checker
+        Since you cannot tell, when a background task is running, you can check if the server is currently indexing or not.
+
+        If the server is currently indexing, you will get a HTTP error saying Conflict.
+        Otherwise, you will get a HTTP OK status.
+
+        """
+        if self.bg_running:
+            raise HTTPException(409, detail="Indexing in progress...")
+        return {
+            "status": "No background task running!"
+        }

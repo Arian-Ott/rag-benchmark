@@ -3,10 +3,10 @@
 import uvicorn
 from fastapi import FastAPI
 
-from chat import Chat
-from database import DocumentDBRouter
 from pipeline.rag import AdvancedRAG, NaiveRagGPT4
-from rag_api import RagApi
+from .chat import Chat
+from .database import DocumentDBRouter
+from .rag_api import RagApi
 
 app = FastAPI()
 #
