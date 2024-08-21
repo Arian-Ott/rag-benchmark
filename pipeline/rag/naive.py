@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import List
 
@@ -13,8 +12,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class NaiveRagGPT4:
-    def __init__(
-            self, embedding_model="text-embedding-ada-002-sweden", gpt_model="gpt-4o"
+    def __init__(self, embedding_model="text-embedding-ada-002-sweden", gpt_model="gpt-4o"
     ):
         self.router = APIRouter()
         self.vs = vector.Vectorstore(embedding_model=embedding_model)
@@ -45,8 +43,7 @@ class NaiveRagGPT4:
         )
         return embedding_response.data[0].embedding
 
-    def retrieve_documents(
-            self, query_embedding: List[float], top_k: int = 5
+    def retrieve_documents(self, query_embedding: List[float], top_k: int = 5
     ) -> List[models.ScoredPoint]:
         """Retrieve top K documents from Qdrant based on the query embedding."""
         search_result = self.vs.client.search(
@@ -66,17 +63,9 @@ class NaiveRagGPT4:
                 model="gpt-4o-sweden",
                 messages=[
                     {"role": "user", "content": prompt},
-                ],
-            )
-            a = dict(json.loads(response.to_json()))
+                ], ).choices[0].message.content
 
-            print(response)
-
-            a = a["choices"][0]["message"]
-
-            print(a)
-
-            return a
+            return response
         except Exception as e:
             logging.error(f"Failed to generate response using GPT-4: {e}")
             raise HTTPException(status_code=500, detail="Failed to generate response.")
@@ -108,4 +97,3 @@ class NaiveRagGPT4:
             raise HTTPException(status_code=500, detail="Failed to generate response.")
 
         return {"query": query_text, "response": response}
-

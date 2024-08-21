@@ -46,8 +46,7 @@ class RagApi:
         tokenizer = tiktoken.encoding_for_model(model_name)
 
         tokens = tokenizer.encode(text, allowed_special="all")
-        return [
-            tokenizer.decode(tokens[i: i + max_tokens])
+        return [tokenizer.decode(tokens[i: i + max_tokens])
             for i in range(0, len(tokens), max_tokens)
         ]
 

@@ -167,9 +167,8 @@ class DocumentDBRouter:
         - `HTTPException`: If the authorization is invalid.
         """
         env_values = dotenv_values("../.env")
-        if (
-                hashlib.sha3_512(data.authorisation.encode("utf-8")).hexdigest()
-                != env_values["COUCH_DB_ACCESS_HASH"]
+        if (hashlib.sha3_512(data.authorisation.encode("utf-8")).hexdigest() != env_values[
+            "COUCH_DB_ACCESS_HASH"]
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

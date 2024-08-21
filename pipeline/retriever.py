@@ -230,9 +230,7 @@ class Extractor:
             for pdf_file in self.pdf_files
             for pdf in pdf_file[1]
         ]
-        for path in tqdm(
-                self.paths_to_extract,
-                total=len(self.paths_to_extract),
+        for path in tqdm(self.paths_to_extract, total=len(self.paths_to_extract),
                 desc="Extracting PDFs...",
         ):
             extracted_text = self._extract_text_from_pdf(path)
