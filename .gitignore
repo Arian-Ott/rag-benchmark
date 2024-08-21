@@ -6,4 +6,3 @@
 qdrant_storage
 data/out
 passwords
-*.http
