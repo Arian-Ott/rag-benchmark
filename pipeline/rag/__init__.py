@@ -1,3 +1,6 @@
 from chunk import Chunk
 
-__all__ = ["Chunk"]
+from .advanced import AdvancedRAG
+from .naive import NaiveRagGPT4
+
+__all__ = ["Chunk", "AdvancedRAG", "NaiveRagGPT4"]

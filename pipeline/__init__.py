@@ -2,9 +2,7 @@
 
 from . import collection, embedding, vector
 
-from .rag.chunk import Chunking
-
-__all__ = ["vector", "collection", "embedding", "retriever", "Chunking"]
+__all__ = ["vector", "collection", "embedding", "retriever"]
 Vectorstore = vector.Vectorstore
 Collection = collection.Collection
 Embedding = embedding.Embedding
