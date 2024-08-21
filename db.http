@@ -1,0 +1,46 @@
+# curl -X PUT http://localhost:5984/_users/org.couchdb.user:jan
+#     -H "Accept: application/json"
+#     -H "Content-Type: application/json"
+#     -d '{"name": "jan", "password": "apple", "roles": [], "type": "user"}'
+PUT http://192.168.1.77:5984/_users/org.couchdb.user:jan
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "jan",
+  "password": "apple",
+  "roles": [],
+  "type": "user"
+}
+
+###
+###
+
+# curl -X POST "http://localhost:6333/collections/text-embedding-3-small/points"
+#-H "Content-Type: application/json"
+#-d '{
+#    "filter": {
+#        "must": [
+#            {
+#                "key": "_id",
+#                "match": {
+#                    "value": "1724076653"
+#                }
+#            }
+#        ]
+#    }
+#}'
+GET http://192.168.1.77:6333/collections/text-embedding-3-small
+Content-Type: application/json
+
+###
+
+# curl http://localhost:6333/collections/collection_name
+#     -H "api-key: <apiKey>"
+POST https://qdrant-admin.arianott.com/collection/text-embedding-3-small/points
+api-key: 7635e57fd7fc5c9b3df1c5c00168975b3cbe28f696d078ed246257daea2f92a0
+
+###
+
+
+
