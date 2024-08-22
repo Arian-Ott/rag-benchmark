@@ -1,6 +1,7 @@
 services:
   api:
-    build: .
+    image: registry.arianott.com/rag-benchmark:amd-latest
+
     env_file:
       - .env
     ports:

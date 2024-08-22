@@ -16,6 +16,8 @@ class Prompt(BaseModel):
     prompt: str = "Wer ist Siglinde?"
     top_k: int = 5
     language: str = "French"
+
+
 class NaiveRagGPT4:
     def __init__(self, embedding_model="text-embedding-ada-002-sweden", gpt_model="gpt-4o"
     ):
@@ -38,8 +40,7 @@ class NaiveRagGPT4:
                 ),
             )
 
-        self.router.add_api_route("/rag/naive-rag/", self.query, methods=["POST"],
-            tags=["NaiveRag"]
+        self.router.add_api_route("/rag/naive-rag/", self.query, methods=["POST"], tags=["NaiveRag"]
         )
 
     def embed_text(self, text: str) -> List[float]:
@@ -68,8 +69,7 @@ class NaiveRagGPT4:
 
         try:
             response = (self.client.chat.completions.create(temperature=0.3, model="gpt-4o-sweden",
-                                                            max_tokens=4000,
-                messages=[{
+                max_tokens=4000, messages=[{
                     "role": "user",
                     "content": prompt
                 }, ], ).choices[0].message.content)

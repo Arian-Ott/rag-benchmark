@@ -34,11 +34,11 @@ class RagApi:
             "/rag/update-index", self.index_all_files, methods=["GET"], tags=["RagAPI"]
         )
         self.router.add_api_route("/rag/check-background", self.check_background, methods=["GET"],
-            tags=["RagAPI"], status_code=200)
+            tags=["RagAPI"], status_code=200, )
         self.router.add_api_route("/rag/create-index", self.create_qdrant, methods=["POST"],
-            tags=["RagAPI"], status_code=HTTPStatus.CREATED)
+            tags=["RagAPI"], status_code=HTTPStatus.CREATED, )
         self.router.add_api_route("/rag/delete-index", self.delete_qdrant, methods=["DELETE"],
-            tags=["RagAPI"], status_code=HTTPStatus.NO_CONTENT)
+            tags=["RagAPI"], status_code=HTTPStatus.NO_CONTENT, )
 
     def _initialize_vectorstore(self):
         if not self.vs.client.collection_exists("text-embedding-3-small"):
@@ -52,8 +52,8 @@ class RagApi:
     def _chunk_text(self, text, max_tokens=300, model_name="text-embedding-ada-002"):
         tokenizer = tiktoken.encoding_for_model(model_name)
         tokens = tokenizer.encode(text)
-        return [tokenizer.decode(tokens[i:i + max_tokens]) for i in
-                range(0, len(tokens), max_tokens)]
+        return [tokenizer.decode(tokens[i: i + max_tokens]) for i in
+            range(0, len(tokens), max_tokens)]
 
     async def index_all_files(self, background_tasks: BackgroundTasks):
         """Index all files in the background."""
@@ -153,7 +153,7 @@ class RagApi:
         batch_size = 4  # Adjust this based on your API's capacity
 
         for i in range(0, len(chunks), batch_size):
-            chunk_batch = chunks[i:i + batch_size]
+            chunk_batch = chunks[i: i + batch_size]
             points = self._gen_points(chunk_batch, file)
             if points:
                 await self._process_chunk_batch(points, file)

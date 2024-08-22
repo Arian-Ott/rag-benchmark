@@ -1,4 +1,4 @@
-"""__init__.py for import """
+"""__init__.py for import"""
 
 from . import collection, embedding, vector
 

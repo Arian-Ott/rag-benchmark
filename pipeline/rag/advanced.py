@@ -15,11 +15,10 @@ class Prompt(BaseModel):
 
 
 class AdvancedRAG:
-
     def __init__(self):
         self.router = APIRouter()
         self.router.add_api_route("/rag/advanced-rag", self.wrapper, methods=["POST"],
-                                  tags=["AdvancedRAG"])
+            tags=["AdvancedRAG"])
         self.clien = AzureOpenAI(api_key=gpt_password, azure_endpoint=gpt_sweden,
             api_version=api_version,
             azure_deployment="https://ai-team-dbs-sweden.openai.azure.com/openai/deployments/gpt-4o-sweden/chat/completions?api-version=2023-03-15-preview", )
@@ -34,6 +33,7 @@ class AdvancedRAG:
         self.embedded_prompt = ""
         self.docs = []
         self.language = "German"
+
     def add_prompt(self, prompt, language):
         p1 = (f"please answer with one Word: Which language is this prompt? "
               f"Prompt: {prompt}")
@@ -77,9 +77,9 @@ class AdvancedRAG:
 
         self.new_prompt = (
             self.clien.chat.completions.create(temperature=0.1, model="gpt-4o-sweden", messages=[{
-                                                                                                      "role": "user",
-                                                                                                      "content": promptt
-                                                                                                  }], ).choices[
+                                                                                                     "role": "user",
+                                                                                                     "content": promptt
+                                                                                                 }], ).choices[
                 0].message.content)
 
     def answer(self):
@@ -91,11 +91,10 @@ class AdvancedRAG:
                   f"Target language: {self.language}")
         print(prompt)
         return (self.clien.chat.completions.create(temperature=0.3, model="gpt-4o-sweden",
-                                                   max_tokens=4000,
-            messages=[{
-                          "role": "user",
-                          "content": prompt
-                      }], ).choices[0].message.content)
+            max_tokens=4000, messages=[{
+                                           "role": "user",
+                                           "content": prompt
+                                       }], ).choices[0].message.content)
 
     async def wrapper(self, request: Prompt = Body(...)):
         self.add_prompt(request.prompt, request.language)
