@@ -27,6 +27,6 @@ app.include_router(rapi.router)
 app.include_router(gpt4.router)
 app.include_router(adv.router)
 app.include_router(mod.router)
-# Start the automatic rate limit handler
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=6969, workers=4)
