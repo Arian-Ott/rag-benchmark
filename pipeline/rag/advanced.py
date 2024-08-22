@@ -9,16 +9,17 @@ from pipeline.vector import Vectorstore
 
 
 class Prompt(BaseModel):
-    prompt: str = "Wer ist Arian Ott"
+    prompt: str = "Wer ist Siglinde?"
     top_k: int = 5
-    language: str = "Deutsch"
+    language: str = "French"
 
 
 class AdvancedRAG:
 
     def __init__(self):
         self.router = APIRouter()
-        self.router.add_api_route("/rag/advanced-rag", self.wrapper, methods=["POST"])
+        self.router.add_api_route("/rag/advanced-rag", self.wrapper, methods=["POST"],
+                                  tags=["AdvancedRAG"])
         self.clien = AzureOpenAI(api_key=gpt_password, azure_endpoint=gpt_sweden,
             api_version=api_version,
             azure_deployment="https://ai-team-dbs-sweden.openai.azure.com/openai/deployments/gpt-4o-sweden/chat/completions?api-version=2023-03-15-preview", )
@@ -32,12 +33,12 @@ class AdvancedRAG:
         self.new_prompt = ""
         self.embedded_prompt = ""
         self.docs = []
-
+        self.language = "German"
     def add_prompt(self, prompt, language):
         p1 = (f"please answer with one Word: Which language is this prompt? "
               f"Prompt: {prompt}")
-        prmt = f"Reformulate the following prompt so that it is more precise and specific Prompt suitable for a LLM to understand. The new prompt must be in {language} only. Prompt: {prompt}"
-
+        prmt = f"Reformulate the following prompt so that it is more precise and specific Prompt suitable for a LLM to understand. Prompt: {prompt}"
+        self.language = language
         self.new_prompt = (
             self.clien.chat.completions.create(temperature=0.1, model="gpt-4o-sweden", messages=[{
                 "role": "user",
@@ -75,7 +76,7 @@ class AdvancedRAG:
             f"Old Data: {self.docs}")
 
         self.new_prompt = (
-            self.clien.chat.completions.create(temperature=0.01, model="gpt-4o-sweden", messages=[{
+            self.clien.chat.completions.create(temperature=0.1, model="gpt-4o-sweden", messages=[{
                                                                                                       "role": "user",
                                                                                                       "content": promptt
                                                                                                   }], ).choices[
@@ -83,12 +84,14 @@ class AdvancedRAG:
 
     def answer(self):
         prompt = (f"System: Please answer following prompt based on the "
-                  f"provided context. Select relevant facts only"
+                  f"provided context. Select relevant facts only. Your answer should be in plain text only."
                   f"Prompt: {self.new_prompt}"
                   f"Context: {self.docs}"
-                  f"Current Date: {datetime.today()}")
+                  f"Current Date: {datetime.today()}"
+                  f"Target language: {self.language}")
         print(prompt)
-        return (self.clien.chat.completions.create(temperature=0.1, model="gpt-4o-sweden",
+        return (self.clien.chat.completions.create(temperature=0.3, model="gpt-4o-sweden",
+                                                   max_tokens=4000,
             messages=[{
                           "role": "user",
                           "content": prompt
