@@ -9,9 +9,9 @@ from pipeline.vector import Vectorstore
 
 
 class Prompt(BaseModel):
-    prompt: str = "Wer ist Arian Ott"
+    prompt: str = "Wer ist Siglinde?"
     top_k: int = 5
-    language: str = "Deutsch"
+    language: str = "French"
 
 
 class AdvancedRAG:
@@ -84,13 +84,14 @@ class AdvancedRAG:
 
     def answer(self):
         prompt = (f"System: Please answer following prompt based on the "
-                  f"provided context. Select relevant facts only"
+                  f"provided context. Select relevant facts only. Your answer should be in plain text only."
                   f"Prompt: {self.new_prompt}"
                   f"Context: {self.docs}"
                   f"Current Date: {datetime.today()}"
                   f"Target language: {self.language}")
         print(prompt)
         return (self.clien.chat.completions.create(temperature=0.3, model="gpt-4o-sweden",
+                                                   max_tokens=4000,
             messages=[{
                           "role": "user",
                           "content": prompt
