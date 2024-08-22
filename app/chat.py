@@ -16,9 +16,8 @@ class Chat:
         self.router.add_api_route(
             "/chat/hello", self.hello, methods=["GET"], tags=["Chat"]
         )
-        self.router.add_api_route(
-            "/chat/prompt", self.prompt, methods=["POST"], tags=["Chat"], deprecated=True,
-            include_in_schema=False)
+        self.router.add_api_route("/chat/prompt", self.prompt, methods=["POST"], tags=["Chat"],
+            deprecated=True, include_in_schema=False, )
         self.router.add_api_route("/chat/xkcd", self.xkcd_meme, tags=["Chat"], methods=["GET"],
             responses={
                 200: {

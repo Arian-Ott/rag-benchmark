@@ -45,14 +45,15 @@ class DocumentDB:
         :return: Meta-information about the added document.
         """
         try:
-            doc_info = self._prepare_document(document)
+            doc_info = self.prepare_document(document)
             response = self._upload_document(doc_info)
             response.raise_for_status()
             return self._construct_response(doc_info)
         except re.RequestException as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    def _prepare_document(self, document) -> dict:
+    @staticmethod
+    def prepare_document(document) -> dict:
         """Prepare document metadata and content for storage."""
         name = document.filename.replace(",", "-").replace(" ", "-")
         content = Extractor.from_bytes(document.file)

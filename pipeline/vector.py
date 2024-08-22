@@ -4,6 +4,7 @@ from dotenv import dotenv_values
 from openai import AzureOpenAI
 from qdrant_client import QdrantClient
 
+import passwords.pw
 from passwords import pw
 
 
@@ -49,10 +50,8 @@ class Vectorstore:
         if self.embedding_model == "text-embedding-ada-002-sweden":
             azure_env = dict(dotenv_values("../azure.env"))
 
-            a = AzureOpenAI(
-                azure_endpoint=azure_env.get("URL"),
-                api_key=azure_env.get("AOAI_ADA_KEY"),
-                api_version=azure_env.get("API_VERSION"),
+            a = AzureOpenAI(azure_endpoint=passwords.pw.embedding_url,
+                api_key=passwords.pw.embedding_key, api_version=passwords.pw.embedding_version,
             )
 
             return a
