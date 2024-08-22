@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import uuid
@@ -93,7 +94,8 @@ class RagApi:
                 ),
             )
         logging.info("Initialized background job for indexing files")
-        background_tasks.add_task(self._background_task)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, lambda: self._background_task())
         return {
             "status": "Initialized a background job to index all files. This can take some minutes."
         }
