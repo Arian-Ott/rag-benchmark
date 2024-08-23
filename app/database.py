@@ -27,11 +27,11 @@ class DocumentDBRouter:
         return retriever.DocumentDB(host=host, port=port)
 
     def _register_routes(self):
-        self.router.add_api_route(
-            "/files/upload_pdf", self.upload_file, methods=["POST"], tags=["Files"]
+        self.router.add_api_route("/files/upload_pdf", self.upload_file, methods=["POST"],
+            tags=["Files"], deprecated=True,
         )
-        self.router.add_api_route(
-            "/files/upload_pdfs/", self.upload_files, methods=["POST"], tags=["Files"]
+        self.router.add_api_route("/files/upload_pdfs/", self.upload_files, methods=["POST"],
+            tags=["Files"], deprecated=True,
         )
         self.router.add_api_route(
             "/files/list_files", self.list_files, methods=["GET"], tags=["Files"]
@@ -43,7 +43,7 @@ class DocumentDBRouter:
             "/files/delete_file/{file_id}",
             self.delete_file,
             methods=["DELETE"],
-            tags=["Files"],
+            tags=["Files"], deprecated=True,
         )
         self.router.add_api_route(
             "/db/add_user", self.create_user, methods=["PUT"], tags=["CouchDB"]
@@ -57,12 +57,20 @@ class DocumentDBRouter:
             )
 
     async def upload_files(self, files: List[UploadFile]):
+        """## Bulk upload of PDF files
+        This API endpoint has been deprecated to prevent unwanted change within the datastructure. Once the university project is graded, this endpoint becomes active.
+
+        ## Funtion
+        Uploads files to the couch db
+        """
         self._check_bg_task()
         return [self.doc_db.add_document(file) for file in files]
 
     async def upload_file(self, file: UploadFile = File(...)):
         """
         ## Upload File
+
+        This API endpoint has been deprecated until this university project is graded.
 
         Handles the uploading of a PDF file. Validates the file type, extracts content,
         stores it in CouchDB, and returns the checksum.
@@ -133,7 +141,7 @@ class DocumentDBRouter:
     async def delete_file(self, file_id: str):
         """
         ## Delete File
-
+        This API endpoint has been deprecated until this university project is graded.
         Deletes a file from the CouchDB database using the specified `file_id`.
 
         ### Parameters:

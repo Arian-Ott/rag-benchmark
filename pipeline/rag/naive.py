@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 class Prompt(BaseModel):
     prompt: str = "Wer ist Siglinde?"
     top_k: int = 5
-    language: str = "French"
+    language: str = "English"
 
 
 class NaiveRagGPT4:
@@ -64,7 +64,7 @@ class NaiveRagGPT4:
         """Generate a response using GPT-4."""
 
         prompt = (
-            f"Please generate an answer based on the given context and query. Generate your answer in the given target language."
+            f"Please generate a precise and accurate answer based on the given context and query. Generate your answer in the given target language."
             f"Context: {context}\n\nQuery: {query}\n\nTarget language: {self.language} \n\nAnswer:")
 
         try:
@@ -81,7 +81,7 @@ class NaiveRagGPT4:
 
     async def query(self, query: Prompt = Body(...)):
         """## Naive RAG
-        This is the naive RAG implementation.
+        This is the naive RAG implementation. Only trigger one request at once. This can take some time to go through the different servers.
 
         >INFO
         >Try asking the AI about the documents in the DB. To get a list of all documents, just use the `list_files` endpoint.
