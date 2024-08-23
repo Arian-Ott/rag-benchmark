@@ -1,15 +1,15 @@
 from hashlib import sha3_256
 
-from dotenv import dotenv_values
 from langchain_text_splitters import TokenTextSplitter
 from tiktoken import get_encoding
 
 
 class Chunking:
     def __init__(self):
+
         # Load chunk size from environment variable, with a default value if not set
-        self.chunk_size = int(dotenv_values("../../.env").get("CHUNK_SIZE", 1000))
-        self.chunk_overlap = int(dotenv_values("../../.env").get("CHUNK_OVERLAP", 2))
+        self.chunk_size = 300
+        self.chunk_overlap = 2
         self.chunks = []
         self.reminder = 0
         self.encoding = get_encoding("cl100k_base")

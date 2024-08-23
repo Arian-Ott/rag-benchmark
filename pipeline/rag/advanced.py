@@ -9,9 +9,9 @@ from pipeline.vector import Vectorstore
 
 
 class Prompt(BaseModel):
-    prompt: str = "Wer ist Siglinde?"
+    prompt: str = ("Wie ist der kontinuierliche Verbesserungsprozess der Volksbank Heilbronn?")
     top_k: int = 5
-    language: str = "French"
+    language: str = "German"
 
 
 class AdvancedRAG:
@@ -90,13 +90,20 @@ class AdvancedRAG:
                   f"Current Date: {datetime.today()}"
                   f"Target language: {self.language}")
         print(prompt)
+
         return (self.clien.chat.completions.create(temperature=0.3, model="gpt-4o-sweden",
-            max_tokens=4000, messages=[{
-                                           "role": "user",
-                                           "content": prompt
-                                       }], ).choices[0].message.content)
+            messages=[{
+                          "role": "user",
+                          "content": prompt
+                      }], ).choices[0].message.content)
 
     async def wrapper(self, request: Prompt = Body(...)):
+        """## Advanced RAG endpoint
+        This represents the advanced RAG implementation.
+        Since the data goes through a decent amount of stages can a request take about 3 minutes.
+
+        Please be patient.
+        """
         self.add_prompt(request.prompt, request.language)
         self.retrieve_top_k(request.top_k)
         self.new_prompting()

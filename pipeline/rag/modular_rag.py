@@ -7,7 +7,8 @@ from pipeline.vector import Vectorstore
 
 
 class ModularRagPrompt(BaseModel):
-    prompt: str = "Wer ist Siglinde?"
+    prompt: str = (
+        "Warum ist Alpinski umweltschädigend? Begründe und belege anhand passender Quellen.",)
     top_k: int = 5
     language: str = "German"
 
@@ -21,7 +22,7 @@ class ModularRag:
             azure_deployment="https://ai-team-dbs-sweden.openai.azure.com/openai/deployments/gpt-4o-sweden/chat/completions?api-version=2023-03-15-preview", )
         self.router = APIRouter()
         self.router.add_api_route("/rag/modular-rag", self.modular, methods=["POST"],
-                                  tags=["ModularRag"])
+            tags=["ModularRag"])
         self.language = "German"
 
     def set_user_prompt(self, prompt):
@@ -48,11 +49,12 @@ class ModularRag:
 
     def filter_and_adjust_features(self, text, original_prompt):
         """Filter and adjust features to align with the original prompt."""
-        prompt = f"Based on the following prompt, extract all relevant information from the text. If none is relevant, respond with 'None'. Text: '{text}' Prompt: '{original_prompt}'"
-        response = self.client.chat.completions.create(model="gpt-4o", temperature=0.01, messages=[{
-                                                                                                       "role": "user",
-                                                                                                       "content": prompt
-                                                                                                   }], )
+        prompt = f"Based on the following prompt, extract all relevant information from the text. If none is relevant, add knowledge from previous trainings. Text: '{text}' Prompt: '{original_prompt}'"
+
+        response = self.client.chat.completions.create(model="gpt-4o", temperature=0.1, messages=[{
+                                                                                                      "role": "user",
+                                                                                                      "content": prompt
+                                                                                                  }], )
         answer = response.choices[0].message.content
 
         if "none" in answer.lower():
@@ -60,7 +62,7 @@ class ModularRag:
                 reformulate_prompt = (
                     f"Based on the given information and the original prompt, reformulate the prompt to better match the available data. "
                     f"Original Prompt: '{original_prompt}', Extracted Features: '{answer}'")
-                response = self.client.chat.completions.create(model="gpt-4o", temperature=0.01,
+                response = self.client.chat.completions.create(model="gpt-4o", temperature=0.1,
                     messages=[{
                                   "role": "user",
                                   "content": reformulate_prompt
@@ -81,10 +83,10 @@ class ModularRag:
         final_prompt = (
             f"Using the information provided, generate a response to the following prompt. "
             f"Prompt: '{prompt}', Information: '{information}', Language: '{self.language}'")
-        response = self.client.chat.completions.create(model="gpt-4o", temperature=0.01, messages=[{
-                                                                                                       "role": "user",
-                                                                                                       "content": final_prompt
-                                                                                                   }], )
+        response = self.client.chat.completions.create(model="gpt-4o", temperature=0.1, messages=[{
+                                                                                                      "role": "user",
+                                                                                                      "content": final_prompt
+                                                                                                  }], )
         return response.choices[0].message.content
 
     def create_embedding(self, text):
@@ -99,7 +101,9 @@ class ModularRag:
             collection_name="text-embedding-3-small")
 
     async def modular(self, req: ModularRagPrompt):
-        """Main method for processing the modular RAG request."""
+        """## Modular Rag endpoint
+        This endpoint takes quite some time to be processed. Once it is triggered it can take a few minutes until you will get a response.
+        """
         self.language = req.language
         self.set_user_prompt(req.prompt)
         refined_prompt = self.refine_prompt(self.user_prompt)

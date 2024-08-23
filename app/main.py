@@ -1,5 +1,6 @@
 """Main module. Here will be the entry point of the application."""
 
+import dotenv
 import uvicorn
 from fastapi import FastAPI
 
@@ -29,4 +30,7 @@ app.include_router(adv.router)
 app.include_router(mod.router)
 
 if __name__ == "__main__":
+    dotenv.load_dotenv("../.env")
+    dotenv.load_dotenv("../azure.env")
+
     uvicorn.run(app, host="0.0.0.0", port=6969, workers=4)

@@ -28,17 +28,18 @@ class RagApi:
         self.vs = vector.Vectorstore(embedding_model="text-embedding-ada-002-sweden")
         self._initialize_routes()
         self._initialize_vectorstore()
+        self.chunk_size = os.environ.get("CHUNK_SIZE", 300)
 
     def _initialize_routes(self):
-        self.router.add_api_route(
-            "/rag/update-index", self.index_all_files, methods=["GET"], tags=["RagAPI"]
-        )
+        self.router.add_api_route("/rag/update-index", self.index_all_files, methods=["GET"],
+            tags=["RagAPI"], deprecated=True, )
         self.router.add_api_route("/rag/check-background", self.check_background, methods=["GET"],
             tags=["RagAPI"], status_code=200, )
         self.router.add_api_route("/rag/create-index", self.create_qdrant, methods=["POST"],
-            tags=["RagAPI"], status_code=HTTPStatus.CREATED, )
+            tags=["RagAPI"], status_code=HTTPStatus.CREATED, deprecated=True, )
         self.router.add_api_route("/rag/delete-index", self.delete_qdrant, methods=["DELETE"],
-            tags=["RagAPI"], status_code=HTTPStatus.NO_CONTENT, )
+            tags=["RagAPI"], status_code=HTTPStatus.NO_CONTENT, deprecated=True,
+        )
 
     def _initialize_vectorstore(self):
         if not self.vs.client.collection_exists("text-embedding-3-small"):
@@ -49,14 +50,16 @@ class RagApi:
                 ),
             )
 
-    def _chunk_text(self, text, max_tokens=300, model_name="text-embedding-ada-002"):
+    def _chunk_text(self, text, max_tokens, model_name="text-embedding-ada-002"):
         tokenizer = tiktoken.encoding_for_model(model_name)
         tokens = tokenizer.encode(text)
         return [tokenizer.decode(tokens[i: i + max_tokens]) for i in
             range(0, len(tokens), max_tokens)]
 
     async def index_all_files(self, background_tasks: BackgroundTasks):
-        """Index all files in the background."""
+        """## Index all documents
+        This API route has been deprecated until this university project has been graded to prevent unwanted changes within the data structure.
+        """
         if self.bg_running:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -75,7 +78,9 @@ class RagApi:
         }
 
     async def _background_task(self):
+        """## Background task for indexing files."""
         try:
+            self.bg_running = True
             logging.info("Obtaining documents")
             db = DocumentDB(
                 host=dotenv_values("../.env").get("COUCHDB_HOST"),
@@ -148,7 +153,7 @@ class RagApi:
             logging.warning(f"No content found in document: {file}")
             return
 
-        chunks = self._chunk_text(content, max_tokens=500)
+        chunks = self._chunk_text(content, max_tokens=int(os.environ.get("CHUNK_SIZE", 300)))
 
         batch_size = 4  # Adjust this based on your API's capacity
 
@@ -161,7 +166,12 @@ class RagApi:
         logging.info(f"Document processing completed for: {file}")
 
     async def delete_qdrant(self):
-        """Delete Qdrant collection."""
+        """
+        ## Delete Qdrant collection
+        This endpoint has been deprecated until the university project has been graded to prevent unwanted changes within the data structure.
+        ## Function:
+        Delete Qdrant collection and reinitialise it.
+        """
         if self.vs.client.collection_exists("text-embedding-3-small"):
             self.vs.client.delete_collection("text-embedding-3-small")
 
